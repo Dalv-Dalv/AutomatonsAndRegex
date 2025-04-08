@@ -6,28 +6,51 @@ using System.Text.Json;
 
 internal class Program {
     static void Main(string[] args) {
-        var tes = ReadTestsFromJSON(@"C:\Dalv\School\University\Classes\Semestrul2\LFA\Sarcini\LFA-Assignment2_Regex_DFA.json");
+        var tests = ReadTestsFromJSON(@"C:\Dalv\School\University\Classes\Semestrul2\LFA\Sarcini\LFA-Assignment2_Regex_DFA.json");
 
-        Console.WriteLine(tes);
+        Thread.Sleep(2000);
 
-        //Automata<string, char> automata;
-        //try {
-        //    automata = AutomataBuilder.ReadFromConfigFile(@"C:\Dalv\School\University\Classes\Semestrul2\LFA\Sarcini\dfaMinTest.config");
-        //    Console.WriteLine("Automata is valid");
-        //} catch(Exception ex) {
-        //    Console.WriteLine("Automata is not valid:");
-        //    Console.WriteLine($"{ex.Message}");
-        //    return;
-        //}
-
-        //Console.WriteLine($"Automata is a {(automata.IsNondeterministic() ? "NFA" : "DFA")}" );
-
-        //automata.GetMinimizedVersion();
+        foreach(var test in tests) {
+            Console.WriteLine($"Parsing regex: {test.Regex}");
+            AutomataBuilder.BuildFromRegex(test.Regex);
+        }
     }
 
-    static void RunTest(Automata<string, char> automata, string test) {
-        Console.WriteLine($"{automata.Validate(test.ToCharArray())} {test}");
-    }
+    
+    //static RegexToken? ProcessRegexToken(string input, ref int i) {
+    //    if(i >= input.Length) return null;
+
+    //    RegexToken token = new RegexToken();
+
+    //    int startIndex = i;
+    //    if(input[i] == '(') {
+    //        token.op1 = ProcessRegexToken(input, ref i);
+    //    } else {
+    //        token.op1 = new RegexToken{ expression = input.Substring(i, 1) };
+    //        i++;
+    //    }
+
+    //    var operation = GetRegexOperator(input[i]);
+
+    //    if(OperatorsString.Contains(input[i])) {
+
+    //        if(IsUnaryOperator(input[i])) {
+    //            token.operation = (RegexOperators)input[i];
+    //        }
+    //    }
+
+
+    //    i++;
+    //    return token;
+    //}
+
+
+    //static void ProcessRegexTest(RegexTest test) {
+    //    string regex = test.Regex;
+
+    //    int i = 0;
+    //    var token = ProcessRegexToken(regex, ref i);
+    //}
 
     static List<RegexTest> ReadTestsFromJSON(string path) {
         var options = new JsonSerializerOptions {
@@ -35,8 +58,6 @@ internal class Program {
         };
 
         string json = File.ReadAllText(path);
-
-        Console.WriteLine(json);
 
         return JsonSerializer.Deserialize<List<RegexTest>>(json, options);
     }
