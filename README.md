@@ -1,4 +1,4 @@
-# Implementations of Automatons and Regex parser
+# Automatons and Regular Expressions (Regex)
 This project was made for a university course about Formal Languages.
 
 The implementation can handle deterministic and nondeterministic finite automatons. It can handle queries in standard DFAs and NFAs but it cant querry into Lambda-NFAs.
