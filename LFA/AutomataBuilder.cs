@@ -4,7 +4,7 @@
 
 
 using System.Text;
-public static class AutomataBuilder {
+public static partial class AutomataBuilder {
     public static Automata<string, char> ReadFromConfigFile(string path) {
         FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read);
 
@@ -146,34 +146,18 @@ public static class AutomataBuilder {
 
 
     // FOR REGEX BUILDING:
-    class Node {
-        public int id;
-        public List<(Node, char?)> connections;
-        public Node(int id) {
-            this.id = id;
-            connections = new List<(Node, char?)>();
-        }
-
-        public void AddConnection(Node node, char? connection) {
-            connections.Add((node, connection));
-        }
-
-        public override string ToString() {
-            return $"({id})";
-        }
-    }
 
     class Token {
-        public Node startNode;
-        public Node endNode;
-        Token(Node startNode, Node endNode) {
+        public AutomatonNode startNode;
+        public AutomatonNode endNode;
+        Token(AutomatonNode startNode, AutomatonNode endNode) {
             this.startNode = startNode;
             this.endNode = endNode;
         }
 
         public Token(char symbol, ref int i) {
-            startNode = new Node(i++);
-            endNode = new Node(i++);
+            startNode = new AutomatonNode(i++);
+            endNode = new AutomatonNode(i++);
             startNode.connections.Add((endNode, symbol));
         }
 
@@ -185,8 +169,8 @@ public static class AutomataBuilder {
                     endNode = rhs.endNode;
                     break;
                 case '|':
-                    startNode = new Node(i++);
-                    endNode = new Node(i++);
+                    startNode = new AutomatonNode(i++);
+                    endNode = new AutomatonNode(i++);
 
                     startNode.AddConnection(lhs.startNode, null);
                     startNode.AddConnection(rhs.startNode, null);
@@ -195,8 +179,8 @@ public static class AutomataBuilder {
                     break;
 
                 case '*':
-                    startNode = new Node(i++);
-                    endNode = new Node(i++);
+                    startNode = new AutomatonNode(i++);
+                    endNode = new AutomatonNode(i++);
 
                     startNode.AddConnection(lhs.startNode, null);
                     lhs.endNode.AddConnection(lhs.startNode, null);
@@ -204,22 +188,24 @@ public static class AutomataBuilder {
                     startNode.AddConnection(endNode, null);
                     break;
                 case '?':
-                    startNode = new Node(i++);
-                    endNode = new Node(i++);
+                    startNode = new AutomatonNode(i++);
+                    endNode = new AutomatonNode(i++);
 
                     startNode.AddConnection(lhs.startNode, null);
                     lhs.endNode.AddConnection(endNode, null);
                     startNode.AddConnection(endNode, null);
                     break;
                 case '+':
-                    startNode = new Node(i++);
-                    endNode = new Node(i++);
+                    //Token copy = DeepCopy(lhs, ref i);
+                    //startNode.AddConnection(copy.startNode, null);
+                    //copy.endNode.AddConnection(lhs.startNode, null);
+                    //copy.endNode.AddConnection(endNode, null);
+                    //lhs.endNode.AddConnection(lhs.startNode, null);
+                    //lhs.endNode.AddConnection(endNode, null);
 
-                    Token copy = DeepCopy(lhs, ref i);
-                    startNode.AddConnection(copy.startNode, null);
-                    copy.endNode.AddConnection(lhs.startNode, null);
-                    lhs.endNode.AddConnection(lhs.startNode, null);
-                    lhs.endNode.AddConnection(endNode, null);
+                    startNode = lhs.startNode;
+                    endNode = lhs.endNode;
+                    endNode.AddConnection(startNode, null);
                     break;
                 default:
                     throw new Exception("Operation not recognzied");
@@ -231,18 +217,18 @@ public static class AutomataBuilder {
         }
 
         public static Token DeepCopy(Token crnt, ref int i) {
-            Dictionary<Node, Node> visited = new();
+            Dictionary<AutomatonNode, AutomatonNode> visited = new();
             DeepCopy(crnt.startNode, visited, ref i);
 
             return new Token(visited[crnt.startNode], visited[crnt.endNode]);
         }
 
-        static Node DeepCopy(Node node, Dictionary<Node, Node> visited, ref int i) {
+        static AutomatonNode DeepCopy(AutomatonNode node, Dictionary<AutomatonNode, AutomatonNode> visited, ref int i) {
             if(node == null) return null;
 
             if(visited.ContainsKey(node)) return visited[node];
 
-            Node copy = new(i++);
+            AutomatonNode copy = new(i++);
             visited[node] = copy;
             foreach(var item in node.connections) {
                 copy.AddConnection(DeepCopy(item.Item1, visited, ref i), item.Item2);
@@ -287,8 +273,8 @@ public static class AutomataBuilder {
     }
 
     static void PrintTokenHierarchy(Token token) {
-        HashSet<Node> visited = new();
-        Stack<(Node, int)> toExplore = new();
+        HashSet<AutomatonNode> visited = new();
+        Stack<(AutomatonNode, int)> toExplore = new();
 
         toExplore.Push((token.startNode, 0));
 
@@ -307,9 +293,9 @@ public static class AutomataBuilder {
         }
     }
 
-    static void DFSDo(Node origin, Action<Node> action, Func<(Node node, char? connection), bool> validate) {
-        HashSet<Node> visited = new();
-        Stack<Node> toExplore = new();
+    static void DFSDo(AutomatonNode origin, Action<AutomatonNode> action, Func<(AutomatonNode node, char? connection), bool> validate) {
+        HashSet<AutomatonNode> visited = new();
+        Stack<AutomatonNode> toExplore = new();
 
         toExplore.Push(origin);
 
@@ -327,16 +313,16 @@ public static class AutomataBuilder {
         }
     }
 
-    static CompositeState[] SubsetConstruction(Node[] nodes) {
-        var compositeStates = new CompositeState[nodes.Length];
+    static CompositeNode[] LambdaClosure(AutomatonNode[] nodes) {
+        var compositeStates = new CompositeNode[nodes.Length];
 
         for(int i = 0; i < nodes.Length; i++) {
             var compositeStateBuilder = new CompositeStateBuilder();
             
             // Explore lambda transitions
-            DFSDo(nodes[i], (Node crnt) => {
-                compositeStateBuilder.AddState(crnt.id);
-            }, ((Node, char?) connection) => {
+            DFSDo(nodes[i], (AutomatonNode crnt) => {
+                compositeStateBuilder.AddState(crnt);
+            }, ((AutomatonNode, char?) connection) => {
                 return connection.Item2 == null;
             });
 
@@ -346,30 +332,106 @@ public static class AutomataBuilder {
         return compositeStates;
     }
 
-    public static Automata<string, char> BuildFromRegex(string infixRegex) {
-        Console.WriteLine($"Processing regex {infixRegex}");
-
-        string postfixedRegex = RegexParser.GetPostfixedForm(infixRegex);
-
-        Console.WriteLine($"Extracted postfixed notation: {postfixedRegex}");
-
-        int nodesCount = 0;
-        var automataToken = GetLambdaNFAToken(postfixedRegex, ref nodesCount);
-        Console.WriteLine($"Calculated Lambda NFA Token:");
-        PrintTokenHierarchy(automataToken);
-
-        Node[] nodes = new Node[nodesCount];
-        DFSDo(automataToken.startNode, (Node crnt) => {
-            nodes[crnt.id] = crnt;
-        }, _ => true);
-        var compositeStates = SubsetConstruction(nodes);
-        Console.WriteLine($"Subset construction:");
-        for(int i = 0; i < nodesCount; i++) {
-            Console.WriteLine($"<q{i}> = {compositeStates[i]}");
+    static char[] ExtractAlphabetFromRegex(string regex) {
+        var result = new HashSet<char>();
+        string operators = "+|*()?.";
+        for(int i = 0; i < regex.Length; i++) {
+            if(operators.Contains(regex[i])) continue;
+            if(result.Contains(regex[i])) continue;
+            result.Add(regex[i]);
         }
 
+        return result.ToArray();
+    }
 
-        Console.WriteLine("\n\n");
-        return null;
+    public static Automata<string, char> BuildFromRegex(string infixRegex) {
+        //Console.WriteLine($"Processing regex {infixRegex}");
+        string postfixedRegex = RegexParser.GetPostfixedForm(infixRegex);
+        //Console.WriteLine($"Extracted postfixed notation: {postfixedRegex}");
+
+        string operators = "+|*()?.";
+        char[] alphabet = ExtractAlphabetFromRegex(infixRegex);
+        //Console.WriteLine($"Extracting alphabet...\nFound alphabet: {alphabet}");
+
+        int nodesCount = 0;
+        Token automataToken = GetLambdaNFAToken(postfixedRegex, ref nodesCount);
+        //Console.WriteLine($"Calculated Lambda NFA Token:");
+        PrintTokenHierarchy(automataToken);
+
+        var nodes = new AutomatonNode[nodesCount];
+        DFSDo(automataToken.startNode, (AutomatonNode crnt) => {
+            nodes[crnt.id] = crnt;
+        }, _ => true);
+
+        CompositeNode[] compositeStates = LambdaClosure(nodes);
+        //Console.WriteLine($"Subset construction:");
+        //for(int i = 0; i < nodesCount; i++) {
+        //    Console.WriteLine($"<q{i}> = {compositeStates[i]}");
+        //}
+
+
+        var expansionTable = new CompositeNode[nodesCount][];
+        for(int i = 0; i < nodesCount; i++) {
+            expansionTable[i] = new CompositeNode[alphabet.Length];
+
+            //Console.WriteLine($"State {compositeStates[i]}");
+            for(int j = 0; j < alphabet.Length; j++) {
+                var crnt = compositeStates[i];
+                crnt = crnt.StepWith(alphabet[j]);
+
+                CompositeNode res = new CompositeNode();
+                foreach(var state in crnt) {
+                    res = res.UnionWith(compositeStates[state.id]);
+                }
+
+                //Console.WriteLine($"[{alphabet[j]}| {res}]");
+
+                expansionTable[i][j] = res;
+            }
+            //Console.WriteLine();
+        }
+
+        var transitionNodes = new Dictionary<CompositeNode, int>();
+        transitionNodes[compositeStates[automataToken.startNode.id]] = 0;
+
+        List<int[]> transitionRule = new();
+        Queue<CompositeNode> queue = new();
+        queue.Enqueue(compositeStates[automataToken.startNode.id]);
+
+        while(queue.Count > 0) {
+            var crnt = queue.Dequeue();
+            transitionRule.Add(new int[alphabet.Length]);
+
+            for(int i = 0; i < alphabet.Length; i++) {
+                CompositeNode res = new CompositeNode();
+                transitionRule[transitionRule.Count - 1][i] = -1;
+                
+                foreach(var state in crnt) {
+                    res = res.UnionWith(expansionTable[state.id][i]);
+                }
+
+                if(res.IsEmpty()) continue;
+
+                if(!transitionNodes.ContainsKey(res)) {
+                    int newIndex = transitionRule.Count + queue.Count;
+                    transitionNodes[res] = newIndex;
+
+                    queue.Enqueue(res);
+                }
+                transitionRule[transitionRule.Count - 1][i] = transitionNodes[res];
+            }
+        }
+
+        string[] states = new string[transitionRule.Count];
+        for(int i = 0; i < transitionRule.Count; i++) {
+            states[i] = $"q{i}";
+        }
+
+        List<string> finalStates = new();
+        foreach(var state in transitionNodes.Keys) {
+            if(state.Contains(automataToken.endNode)) finalStates.Add(states[transitionNodes[state]]);
+        }
+
+        return new Automata<string, char>(states, alphabet, transitionRule.ToArray(), "q0", finalStates.ToArray());
     }
 }

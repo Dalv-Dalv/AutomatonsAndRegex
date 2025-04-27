@@ -3,6 +3,7 @@
 // C# .NET 8.0
 
 using System.Reflection.Metadata.Ecma335;
+using System.Text;
 
 public class Automata<State, Character> {
     public State[] states;
@@ -129,6 +130,27 @@ public class Automata<State, Character> {
 
 
         return null;
+    }
+
+    public override string ToString() {
+        StringBuilder sb = new StringBuilder();
+        sb.AppendLine(IsNondeterministic() ? "Nondeterministic Automaton" : "Deterministic Automaton");
+        sb.AppendLine($"States: ({string.Join(',', states)})");
+        sb.AppendLine($"Initial state: {states[initialStateIndex]}");
+        sb.AppendLine($"Final states: {string.Join(',', finalStates)}");
+        sb.AppendLine($"Alphabet: ({string.Join(',', alphabet)})");
+        sb.AppendLine($"Transitions:");
+        for(int i = 0; i < states.Length; i++) {
+            sb.Append($"{states[i]} -> ");
+            for(int j = 0; j < alphabet.Length; j++) {
+                var connections = transitionRule[i][j].Where((k) => k >= 0).Select((k) => states[k]);
+
+                sb.Append($"[{alphabet[j]}| {string.Join(',', connections)}] ".PadRight(9));
+            }
+            sb.AppendLine();
+        }
+
+        return sb.ToString();
     }
 }
 
