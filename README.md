@@ -9,3 +9,7 @@ Regex parsing relies on these steps:
 3. While tokenizing, perform the operations and build the lambda-NFA
 4. Lambda closure
 5. Subset construction
+
+To parse a regex, `AutomataBuilder.BuildFromRegex(regexString);` is called and a deterministic `Automata<string, char>` is returned.
+Behind the scenes, this function first explicitizes concatenations such that an expression `(a|bc)d` is explicitized to `(a|b.c).d` where the `.` represents the concatenation operation.
+After that's done, the expression is turned into its postfixed notation using the Shunting Yard algorithm, the previous expression becomes `abc.|`
