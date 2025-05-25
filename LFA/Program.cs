@@ -2,35 +2,46 @@
 // Grupa 151
 // C# .NET 8.0
 
+using System.Text;
 using System.Text.Json;
 using static System.Net.Mime.MediaTypeNames;
 
 internal class Program {
-    static void Main(string[] args) {
-        var tests = ReadTestsFromJSON(@"C:\Dalv\School\University\Classes\Semestrul2\LFA\Sarcini\LFA-Assignment2_Regex_DFA.json");
+    static void Main() {
+        CFGBuilder builder = new();
+        Console.WriteLine("Enter your productions (S -> aSb | ..., use # for lambda and _ for spaces)");
+        string line;
+        while(!string.IsNullOrEmpty(line = Console.ReadLine())) {
+            builder.AddProduction(line);
+        }
+        Console.WriteLine("Finished reading\n");
 
-        //Console.WriteLine($"Parsing regex: {tests[2].Regex}");
-        //var automat = AutomataBuilder.BuildFromRegex(tests[2].Regex);
-        //foreach(var test in tests[2].TestStrings) {
-        //    var res = automat.Validate(test.Input.ToCharArray());
-        //    if(res != test.Expected) {
-        //        Console.ForegroundColor = ConsoleColor.Red;
-        //    } else {
-        //        Console.ForegroundColor = ConsoleColor.Green;
-        //    }
+        Console.WriteLine("Randomly generated words:");
+        CFG cfg = builder.Build();
+        for(int i = 0; i < 10; i++) {
+            Console.WriteLine($"\"{cfg.GenerateRandomWord(50, 100)}\"");
+        }
 
-        //    Console.WriteLine($"\"{test.Input}\"");
+        Console.WriteLine();
 
-        //    Console.ForegroundColor = ConsoleColor.White;
-        //}
+        while(true) {
+            Console.WriteLine("Enter a word to check:");
+            line = Console.ReadLine();
+            if(cfg.ContainsWord(line)) {
+                Console.WriteLine($"The CFG does contain \"{line}\"");
+            } else {
+                Console.WriteLine($"The CFG does NOT contain \"{line}\"");
+            }
 
-        foreach(var test in tests) {
-            Console.WriteLine($"Parsing regex: {test.Regex}");
-            var automat = AutomataBuilder.BuildFromRegex(test.Regex);
+            string? res = cfg.DerivateWord(line);
+            if(res == null) {
+                Console.WriteLine("Could not derivate word");
+            } else {
+                Console.WriteLine("Derivation process:");
+                Console.WriteLine(res);
+            }
 
-            Console.WriteLine(automat);
-
-            RunTest(automat, test);
+            Console.WriteLine("\n");
         }
     }
 
@@ -48,42 +59,6 @@ internal class Program {
             Console.ForegroundColor = ConsoleColor.White;
         }
     }
-
-    
-    //static RegexToken? ProcessRegexToken(string input, ref int i) {
-    //    if(i >= input.Length) return null;
-
-    //    RegexToken token = new RegexToken();
-
-    //    int startIndex = i;
-    //    if(input[i] == '(') {
-    //        token.op1 = ProcessRegexToken(input, ref i);
-    //    } else {
-    //        token.op1 = new RegexToken{ expression = input.Substring(i, 1) };
-    //        i++;
-    //    }
-
-    //    var operation = GetRegexOperator(input[i]);
-
-    //    if(OperatorsString.Contains(input[i])) {
-
-    //        if(IsUnaryOperator(input[i])) {
-    //            token.operation = (RegexOperators)input[i];
-    //        }
-    //    }
-
-
-    //    i++;
-    //    return token;
-    //}
-
-
-    //static void ProcessRegexTest(RegexTest test) {
-    //    string regex = test.Regex;
-
-    //    int i = 0;
-    //    var token = ProcessRegexToken(regex, ref i);
-    //}
 
     static List<RegexTest> ReadTestsFromJSON(string path) {
         var options = new JsonSerializerOptions {
