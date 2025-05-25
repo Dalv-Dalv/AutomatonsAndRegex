@@ -12,6 +12,7 @@
     public void AddProduction(string production) {
         production = production.Replace(" ", "");
         production = production.Replace('_', ' ');
+        production = production.Replace("#", "");
         // S->aSb|#
 
         char nt = production[0];
@@ -44,7 +45,7 @@
                 }
             }
 
-            var x = new Production(prod.Replace("#", ""), terminating);
+            var x = new Production(prod, terminating);
             if(!productions.ContainsKey(nt)) {
                 productions[nt] = new List<Production>();
             }
@@ -57,6 +58,6 @@
 
         var dict = productions.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray());
 
-        return new CFG(startSymbol.Value, terminals.ToArray(), variables.ToArray(), dict);
+        return new CFG(startSymbol.Value, new HashSet<char>(terminals), new HashSet<char>(variables), dict);
     }
 }

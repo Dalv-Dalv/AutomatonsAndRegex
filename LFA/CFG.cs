@@ -6,15 +6,21 @@ using System.Threading.Tasks;
 
 class CFG {
     char startSymbol;
-    char[] terminals, nonterminals;
+    HashSet<char> terminals, nonterminals;
     Dictionary<char, Production[]> productions;
     Random rand;
-
-    public CFG(char startSymbol, char[] terminals, char[] nonterminals, Dictionary<char, Production[]> productions) {
+    int maxTC;
+    public CFG(char startSymbol, HashSet<char> terminals, HashSet<char> nonterminals, Dictionary<char, Production[]> productions) {
         this.startSymbol = startSymbol;
         this.terminals = terminals;
         this.nonterminals = nonterminals;
         this.productions = productions;
+
+        foreach(var prods in productions.Values) {
+            foreach(var production in prods) {
+                maxTC = int.Max(maxTC, production.terminalsCount);
+            }
+        }
 
         rand = new Random();
     }
@@ -74,25 +80,30 @@ class CFG {
 
     struct DerivationNode {
         public string str;
+        public int terminalsCount;
         public List<(char, int)> productionsUsed;
         public List<string> derivationSteps;
 
-        public DerivationNode(string str) {
+        public DerivationNode(string str, int terminalsCount) {
             this.str = str;
+            this.terminalsCount = terminalsCount;
             productionsUsed = new List<(char, int)>();
             derivationSteps = new List<string>();
         }
 
-        public DerivationNode(string str, List<(char, int)> productionsUsed, List<string> derivationSteps) {
+        public DerivationNode(string str, int terminalsCount, List<(char, int)> productionsUsed, List<string> derivationSteps) {
             this.str = str;
+            this.terminalsCount = terminalsCount;
             this.productionsUsed = productionsUsed;
             this.derivationSteps = derivationSteps;
         }
     }
     public string? DerivateWord(string word) {
+        if(!word.All(c => terminals.Contains(c))) return null;
+
         Queue<DerivationNode> queue = new();
         queue.Enqueue(new DerivationNode(
-            $"{startSymbol}",
+            $"{startSymbol}", 0,
             new List<(char, int)>(),
             new List<string>()
         ));
@@ -109,6 +120,9 @@ class CFG {
                 finalDerivation = node;
                 break;
             }
+
+            if(node.terminalsCount > word.Length) continue;
+            if(node.str.Length > maxTC * word.Length + 1) continue;
 
             int? ntI = null;
             bool valid = true;
@@ -140,6 +154,7 @@ class CFG {
 
                 queue.Enqueue(new DerivationNode(
                     newStr,
+                    node.terminalsCount + productions[symbol][i].terminalsCount,
                     node.productionsUsed.Append((symbol, i)).ToList(),
                     node.derivationSteps.Append(newStr).ToList()
                 ));
@@ -158,8 +173,10 @@ class CFG {
     }
 
     public bool ContainsWord(string word) {
-        Queue<string> queue = new();
-        queue.Enqueue($"{startSymbol}");
+        if(!word.All(c => terminals.Contains(c))) return false;
+
+        Queue<(string, int)> queue = new();
+        queue.Enqueue(($"{startSymbol}", 0));
 
         HashSet<string> visited = new();
         visited.Add($"{startSymbol}");
@@ -167,14 +184,17 @@ class CFG {
         while(queue.Count > 0) {
             var node = queue.Dequeue();
 
-            if(node == word) {
+            if(node.Item1 == word) {
                 return true;
             }
 
+            if(node.Item2 > word.Length) continue;
+            if(node.Item1.Length > maxTC * word.Length + 1) continue;
+
             int? ntI = null;
             bool valid = true;
-            for(int i = 0; i < node.Length; i++) {
-                char c = node[i];
+            for(int i = 0; i < node.Item1.Length; i++) {
+                char c = node.Item1[i];
                 if(IsTerminal(c)) {
                     if(i >= word.Length || c != word[i]) {
                         valid = false;
@@ -190,16 +210,17 @@ class CFG {
             if(!valid) continue;
             if(ntI == null) continue;
 
-            char symbol = node[ntI.Value];
-            string prefix = node.Substring(0, ntI.Value);
-            string suffix = node.Substring(ntI.Value + 1);
+            char symbol = node.Item1[ntI.Value];
+            string prefix = node.Item1.Substring(0, ntI.Value);
+            string suffix = node.Item1.Substring(ntI.Value + 1);
             for(int i = 0; i < productions[symbol].Length; i++) {
                 string newStr = prefix + productions[symbol][i].str + suffix;
 
+                if(node.Item2 + productions[symbol][i].terminalsCount > word.Length) continue;
                 if(visited.Contains(newStr)) continue;
                 visited.Add(newStr);
 
-                queue.Enqueue(newStr);
+                queue.Enqueue((newStr, node.Item2 + productions[symbol][i].terminalsCount));
             }
         }
 
