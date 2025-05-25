@@ -24,3 +24,25 @@ That function has these following steps:
 7. Subset construction using those composite nodes.
 8. Bring it all together, turn the data into something to use when creating the final DFA in the form of a `Automata<string, char>`
 9. All done!
+
+# Context-free Grammars
+This project represents CFGs as (startSymbol, terminals[], nonterminals[], productions<char, Production[]>) where the productions are a dictionary of char (the non-terminal) and Production[].
+The lambda/empty symbol is represented with a # and spaces with an _
+
+#### Supported functions:
+- Generating random words (Given a max recursion depth and max length)
+- Checking if a word is part of the language defined by the CFG
+- Showing the derivation of a word within a CFG
+
+#### Derivation and checking of words
+This was done using something similar to a breadth first search.
+These functions are similar, but within the derivation function, the algorithm keeps track of which productions were used and the intermediary words.
+They work as such:
+- Initialize a queue with the start symbol
+- While the queue isnt empty:
+  - Pop an element off
+  - If the element is equal to the target word, return true (or show the derivation)
+  - Itterate through it from the left, if the nonterminals dont match the target word, return false
+  - Find the first nonterminal symbol
+  - Itterate over the productions of that symbol and add each of its applications to the queue
+- If we havent returned already, return false
