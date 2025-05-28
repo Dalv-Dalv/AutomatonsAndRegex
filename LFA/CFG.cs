@@ -9,7 +9,7 @@ class CFG {
     HashSet<char> terminals, nonterminals;
     Dictionary<char, Production[]> productions;
     Random rand;
-    int maxTC;
+    int maxLen;
     public CFG(char startSymbol, HashSet<char> terminals, HashSet<char> nonterminals, Dictionary<char, Production[]> productions) {
         this.startSymbol = startSymbol;
         this.terminals = terminals;
@@ -18,7 +18,7 @@ class CFG {
 
         foreach(var prods in productions.Values) {
             foreach(var production in prods) {
-                maxTC = int.Max(maxTC, production.terminalsCount);
+                maxLen = int.Max(maxLen, production.str.Length);
             }
         }
 
@@ -122,7 +122,7 @@ class CFG {
             }
 
             if(node.terminalsCount > word.Length) continue;
-            if(node.str.Length > maxTC * word.Length + 1) continue;
+            if(node.str.Length > maxLen * word.Length + 1) continue;
 
             int? ntI = null;
             bool valid = true;
@@ -189,7 +189,7 @@ class CFG {
             }
 
             if(node.Item2 > word.Length) continue;
-            if(node.Item1.Length > maxTC * word.Length + 1) continue;
+            if(node.Item1.Length > maxLen * word.Length + 1) continue;
 
             int? ntI = null;
             bool valid = true;
